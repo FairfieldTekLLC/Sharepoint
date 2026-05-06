@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "clean-docs-webpart-client-side-solution",
+    "id": "1f17c228-c678-4fb1-9fcb-93e3ba50b0aa",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.22.2"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "clean-docs-webpart description"
+      },
+      "longDescription": {
+        "default": "clean-docs-webpart description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "clean-docs-webpart Feature",
+        "description": "The feature that activates elements of the clean-docs-webpart solution.",
+        "id": "df0892dc-be9c-498d-b551-c0ba4543e610",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/clean-docs-webpart.sppkg"
+  }
+}

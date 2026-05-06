@@ -1,0 +1,19 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "useGulp": false,
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.22.2",
+    "sdksVersions": {},
+    "version": "1.22.2",
+    "libraryName": "clean-docs-webpart",
+    "libraryId": "1f17c228-c678-4fb1-9fcb-93e3ba50b0aa",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "clean-docs-webpart",
+    "solutionShortDescription": "clean-docs-webpart description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "componentType": "webpart"
+  }
+}
