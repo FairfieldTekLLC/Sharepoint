@@ -1,0 +1,19 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "useGulp": false,
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.22.2",
+    "sdksVersions": {},
+    "version": "1.22.2",
+    "libraryName": "chat-bot-web-part",
+    "libraryId": "449b2f4d-e247-4572-9116-25b024bc3530",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "chat-bot-web-part",
+    "solutionShortDescription": "chat-bot-web-part description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "componentType": "webpart"
+  }
+}

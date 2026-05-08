@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "chat-bot-web-part-client-side-solution",
+    "id": "449b2f4d-e247-4572-9116-25b024bc3530",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.22.2"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "chat-bot-web-part description"
+      },
+      "longDescription": {
+        "default": "chat-bot-web-part description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "chat-bot-web-part Feature",
+        "description": "The feature that activates elements of the chat-bot-web-part solution.",
+        "id": "edee1f30-20c1-4a39-ba08-2e23d60d7636",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/chat-bot-web-part.sppkg"
+  }
+}

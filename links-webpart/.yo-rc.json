@@ -1,0 +1,19 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "useGulp": false,
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.22.2",
+    "sdksVersions": {},
+    "version": "1.22.2",
+    "libraryName": "links-webpart",
+    "libraryId": "cc3a4a06-ed48-49e3-9656-ba6acf7a93cc",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "links-webpart",
+    "solutionShortDescription": "links-webpart description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "componentType": "webpart"
+  }
+}

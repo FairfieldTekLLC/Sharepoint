@@ -47,7 +47,13 @@ interface DocItem {
   DisplayEndDate: string | null;
 }
 
-export const CleanDocs: React.FC<ICleanDocsProps> = ({ siteUrl, libraryTitle, maxItems, spHttpClient }) => {
+export const CleanDocs: React.FC<ICleanDocsProps> = ({
+  siteUrl,
+  titleBarText,
+  libraryTitle,
+  maxItems,
+  spHttpClient
+}) => {
   const [docs, setDocs] = React.useState<DocItem[]>([]);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -55,7 +61,11 @@ export const CleanDocs: React.FC<ICleanDocsProps> = ({ siteUrl, libraryTitle, ma
   React.useEffect(() => {
     loadDocs(spHttpClient, siteUrl, libraryTitle, maxItems)
       .then(items => {
-        setDocs(items);
+        const sortedItems = [...items].sort((a, b) =>
+          a.FileLeafRef.localeCompare(b.FileLeafRef, undefined, { sensitivity: "base" })
+        );
+
+        setDocs(sortedItems);
         setLoading(false);
       })
       .catch(err => {
@@ -64,22 +74,48 @@ export const CleanDocs: React.FC<ICleanDocsProps> = ({ siteUrl, libraryTitle, ma
       });
   }, [siteUrl, libraryTitle, maxItems]);
 
-  if (loading) return React.createElement("div", null, "Loading...");
-  if (error) return React.createElement("div", null, `Error: ${error}`);
+  let content: React.ReactElement;
+
+  if (loading) {
+    content = React.createElement("div", null, "Loading...");
+  } else if (error) {
+    content = React.createElement("div", null, `Error: ${error}`);
+  } else {
+    content = React.createElement(
+      "ul",
+      null,
+      docs.map(doc => {
+        const docUrl = doc.FileRef.startsWith("http")
+          ? doc.FileRef
+          : new URL(doc.FileRef, window.location.origin).toString();
+
+        return React.createElement(
+          "li",
+          { key: doc.FileRef },
+          React.createElement(
+            "a",
+            {
+              href: docUrl,
+              target: "_blank",
+              rel: "noopener noreferrer",
+              "data-interception": "off",
+              onClick: (ev: React.MouseEvent<HTMLAnchorElement>) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                window.open(docUrl, "_blank", "noopener,noreferrer");
+              }
+            },
+            doc.FileLeafRef
+          )
+        );
+      })
+    );
+  }
 
   return React.createElement(
     "div",
     { className: styles.cleanDocs },
-    React.createElement(
-      "ul",
-      null,
-      docs.map(doc =>
-      React.createElement(
-        "li",
-        { key: doc.FileRef },
-        React.createElement("a", { href: doc.FileRef }, doc.FileLeafRef)
-      )
-    )
-    )
+    React.createElement("div", { className: styles.titleBar }, titleBarText || "Clean Documents"),
+    content
   );
 };

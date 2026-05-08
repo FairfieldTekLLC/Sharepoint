@@ -1,35 +1,13 @@
 @import '~@fluentui/react/dist/sass/References.scss';
 
-.cleanDocs {
+.chatBotWebPart {
   overflow: hidden;
   padding: 1em;
   color: "[theme:bodyText, default: #323130]";
-
-  ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  li a {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: block;
-  }
-
+  color: var(--bodyText);
   &.teams {
     font-family: $ms-font-family-fallbacks;
   }
-}
-
-.titleBar {
-  background-color: "[theme:themePrimary, default: #0078d4]";
-  color: "[theme:white, default: #ffffff]";
-  font-size: 1rem;
-  font-weight: 600;
-  margin: -1em -1em 0.75em;
-  padding: 0.6em 0.9em;
 }
 
 .welcome {
@@ -45,10 +23,12 @@
   a {
     text-decoration: none;
     color: "[theme:link, default:#03787c]";
+    color: var(--link); // note: CSS Custom Properties support is limited to modern browsers only
 
     &:hover {
       text-decoration: underline;
       color: "[theme:linkHovered, default: #014446]";
+      color: var(--linkHovered); // note: CSS Custom Properties support is limited to modern browsers only
     }
   }
 }
