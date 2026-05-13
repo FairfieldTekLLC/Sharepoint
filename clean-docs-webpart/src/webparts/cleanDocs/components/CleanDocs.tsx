@@ -15,7 +15,7 @@ async function loadDocs(
 
   const url =
     `${webUrl}/_api/web/lists/GetByTitle('${safeTitle}')/items` +
-    `?$select=FileRef,FileLeafRef,DisplayStartDate,DisplayEndDate,FSObjType` +
+    `?$select=FileRef,FileLeafRef,DisplayText,DisplayStartDate,DisplayEndDate,FSObjType` +
     `&$filter=FSObjType eq 0` +
     `&$top=${maxItems}`;
 
@@ -43,8 +43,14 @@ async function loadDocs(
 interface DocItem {
   FileRef: string;
   FileLeafRef: string;
+  DisplayText?: string | null;
   DisplayStartDate: string | null;
   DisplayEndDate: string | null;
+}
+
+function getDocDisplayName(doc: DocItem): string {
+  const displayText = doc.DisplayText?.trim();
+  return displayText ? displayText : doc.FileLeafRef;
 }
 
 export const CleanDocs: React.FC<ICleanDocsProps> = ({
@@ -62,7 +68,7 @@ export const CleanDocs: React.FC<ICleanDocsProps> = ({
     loadDocs(spHttpClient, siteUrl, libraryTitle, maxItems)
       .then(items => {
         const sortedItems = [...items].sort((a, b) =>
-          a.FileLeafRef.localeCompare(b.FileLeafRef, undefined, { sensitivity: "base" })
+          getDocDisplayName(a).localeCompare(getDocDisplayName(b), undefined, { sensitivity: "base" })
         );
 
         setDocs(sortedItems);
@@ -105,7 +111,7 @@ export const CleanDocs: React.FC<ICleanDocsProps> = ({
                 window.open(docUrl, "_blank", "noopener,noreferrer");
               }
             },
-            doc.FileLeafRef
+            getDocDisplayName(doc)
           )
         );
       })
