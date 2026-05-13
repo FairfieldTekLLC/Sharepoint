@@ -42,4 +42,32 @@ export default class SiteSearchService {
       total: container?.total
     };
   }
+
+  public async listAccessibleSites(max = 300): Promise<ISiteHit[]> {
+    const pageSize = 100;
+    const collected: ISiteHit[] = [];
+    let from = 0;
+    let more = true;
+
+    while (more && collected.length < max) {
+      const page = await this.searchSites('*', from, pageSize);
+      const items = page.items ?? [];
+
+      collected.push(...items);
+      from += pageSize;
+      more = Boolean(page.more) && items.length > 0;
+    }
+
+    const deduped = new Map<string, ISiteHit>();
+    for (const site of collected) {
+      const key = (site.webUrl || site.id || '').toLowerCase();
+      if (!key || deduped.has(key)) {
+        continue;
+      }
+
+      deduped.set(key, site);
+    }
+
+    return Array.from(deduped.values());
+  }
 }

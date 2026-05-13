@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Elements xmlns="http://schemas.microsoft.com/sharepoint/">
     <CustomAction
+        Name="CustomNav"
         Title="CustomNav"
         Location="ClientSideExtension.ApplicationCustomizer"
         ClientSideComponentId="3b6f2fb3-8cd0-4f52-9d2e-0d2a4f24c8d1">
