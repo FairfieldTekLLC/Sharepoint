@@ -1,0 +1,20 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "useGulp": false,
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.22.2",
+    "sdksVersions": {},
+    "version": "1.22.2",
+    "libraryName": "custom-nav",
+    "libraryId": "5f6f383b-abf8-48be-99f8-c17fc829bb45",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "custom-nav",
+    "solutionShortDescription": "custom-nav description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "componentType": "extension",
+    "extensionType": "ApplicationCustomizer"
+  }
+}

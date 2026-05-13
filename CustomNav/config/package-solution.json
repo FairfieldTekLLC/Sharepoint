@@ -1,0 +1,49 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    
+    "webApiPermissionRequests": [
+      { "resource": "Microsoft Graph", "scope": "Sites.Read.All" }],
+
+    "name": "custom-nav-client-side-solution",
+    "id": "5f6f383b-abf8-48be-99f8-c17fc829bb45",
+    "version": "1.0.0.4",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.22.2"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "custom-nav description"
+      },
+      "longDescription": {
+        "default": "custom-nav description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "Application Extension - Deployment of custom action",
+        "description": "Deploys a custom action with ClientSideComponentId association",
+        "id": "99bb6268-038c-4c3f-ac9f-69c3399420e7",
+        "version": "1.0.0.4",
+        "assets": {
+          "elementManifests": [
+            "elements.xml"
+          ]
+        }
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/custom-nav.sppkg"
+  }
+}

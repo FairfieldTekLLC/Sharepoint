@@ -1,0 +1,19 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "useGulp": false,
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.22.2",
+    "sdksVersions": {},
+    "version": "1.22.2",
+    "libraryName": "spfx-links-webpart",
+    "libraryId": "3b20d965-fa58-44b9-bde8-2ab256c16a38",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "spfx-links-webpart",
+    "solutionShortDescription": "spfx-links-webpart description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "componentType": "webpart"
+  }
+}

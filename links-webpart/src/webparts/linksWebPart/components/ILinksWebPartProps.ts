@@ -5,6 +5,7 @@ export interface ILinksWebPartProps {
   listTitle: string;
   maxItems: number;
   openInNewTab: boolean;
+  showTopText: boolean;
   showDescription: boolean;
   backgroundColor: string;
   titleBarColor: string;

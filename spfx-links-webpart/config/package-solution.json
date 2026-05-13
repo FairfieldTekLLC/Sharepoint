@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "spfx-links-webpart-client-side-solution",
+    "id": "3b20d965-fa58-44b9-bde8-2ab256c16a38",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.22.2"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "spfx-links-webpart description"
+      },
+      "longDescription": {
+        "default": "spfx-links-webpart description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "spfx-links-webpart Feature",
+        "description": "The feature that activates elements of the spfx-links-webpart solution.",
+        "id": "d7307cb5-4161-47d8-be1a-26d5f4bf8614",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/spfx-links-webpart.sppkg"
+  }
+}

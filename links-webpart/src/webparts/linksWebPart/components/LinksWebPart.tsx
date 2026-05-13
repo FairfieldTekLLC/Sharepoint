@@ -121,17 +121,19 @@ export default function LinksWebPart(props: ILinksWebPartProps): JSX.Element {
 
   return (
     <div className={styles.categoryList} style={containerStyle}>
-      <div className={styles.hotlineBox}>
-        <div>If you are unable to enter an IT Help Desk Ticket, please call the IT Hotline</div>
-        <div className={styles.hotlineLine}>
-          <span>CCF &amp; ASB:</span>
-          <span>240-223-3333</span>
+      {props.showTopText && (
+        <div className={styles.hotlineBox}>
+          <div>If you are unable to enter an IT Help Desk Ticket, please call the IT Hotline</div>
+          <div className={styles.hotlineLine}>
+            <span>CCF &amp; ASB:</span>
+            <span>240-223-3333</span>
+          </div>
+          <div className={styles.hotlineLine}>
+            <span>BFS:</span>
+            <span>301-986-6010</span>
+          </div>
         </div>
-        <div className={styles.hotlineLine}>
-          <span>BFS:</span>
-          <span>301-986-6010</span>
-        </div>
-      </div>
+      )}
 
       {categories.map((category) => (
         <details key={category} className={styles.categorySection} open={expandedCategory === category}>

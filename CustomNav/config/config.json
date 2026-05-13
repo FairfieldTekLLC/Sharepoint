@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "custom-nav-application-customizer": {
+      "components": [
+        {
+          "entrypoint": "./lib/extensions/customNav/CustomNavApplicationCustomizer.js",
+          "manifest": "./src/extensions/customNav/CustomNavApplicationCustomizer.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "CustomNavApplicationCustomizerStrings": "lib/extensions/customNav/loc/{locale}.js"
+  }
+}

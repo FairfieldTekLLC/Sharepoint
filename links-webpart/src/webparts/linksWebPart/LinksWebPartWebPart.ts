@@ -23,6 +23,7 @@ export interface ILinksWebPartWebPartProps {
   listTitle: string;
   maxItems: number;
   openInNewTab: boolean;
+  showTopText: boolean;
   showDescription: boolean;
   backgroundColor: string;
   titleBarColor: string;
@@ -39,6 +40,7 @@ export default class LinksWebPartWebPart extends BaseClientSideWebPart<ILinksWeb
   if (!this.properties.listTitle) this.properties.listTitle = "Links";
   if (!this.properties.maxItems) this.properties.maxItems = 12;
   if (this.properties.openInNewTab === undefined) this.properties.openInNewTab = true;
+  if (this.properties.showTopText === undefined) this.properties.showTopText = true;
   if (this.properties.showDescription === undefined) this.properties.showDescription = true;
   if (!this.properties.backgroundColor) this.properties.backgroundColor = '#f7f7f7';
   if (!this.properties.titleBarColor) this.properties.titleBarColor = '#d1d3aa';
@@ -51,6 +53,7 @@ export default class LinksWebPartWebPart extends BaseClientSideWebPart<ILinksWeb
       listTitle: this.properties.listTitle,
       maxItems: this.properties.maxItems,
       openInNewTab: this.properties.openInNewTab,
+      showTopText: this.properties.showTopText,
       showDescription: this.properties.showDescription,
       backgroundColor: this.properties.backgroundColor,
       titleBarColor: this.properties.titleBarColor,
@@ -179,6 +182,9 @@ export default class LinksWebPartWebPart extends BaseClientSideWebPart<ILinksWeb
               }),
               PropertyPaneToggle("openInNewTab", {
                 label: "Open links in a new tab"
+              }),
+              PropertyPaneToggle("showTopText", {
+                label: "Show top text"
               }),
               PropertyPaneToggle("showDescription", {
                 label: "Show description"
