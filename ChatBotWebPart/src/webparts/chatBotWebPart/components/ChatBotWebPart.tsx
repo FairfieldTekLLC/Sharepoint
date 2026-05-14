@@ -1,33 +1,119 @@
+/**
+ * ChatBotWebPart.tsx  (ChatWidget)
+ *
+ * React functional component that renders an embedded AI chat widget inside
+ * a SharePoint page.  Supports two rendering modes:
+ *
+ *  1. iframe mode  — When `agentUrl` is non-empty the agent URL is loaded in a
+ *                    sandboxed <iframe>.  No BotFramework SDK required.
+ *  2. WebChat mode — When `agentUrl` is absent, the BotFramework WebChat SDK
+ *                    is loaded from CDN and rendered against a Direct Line token.
+ *                    An AAD token exchange middleware intercepts OAuth card
+ *                    activities to enable silent SSO for the signed-in user.
+ *
+ * The widget can be minimised/expanded via a toggle button in the header bar.
+ */
 import * as React from "react";
 import { AadTokenProvider } from "@microsoft/sp-http";
 import { WebPartContext } from "@microsoft/sp-webpart-base";
 
+/**
+ * Content type identifier for Bot Framework OAuth card attachments.
+ * Used by the WebChat store middleware to detect and intercept sign-in prompts.
+ */
 const OAuthCardContentType = "application/vnd.microsoft.card.oauth";
 
+/**
+ * Props for the ChatWidget component.
+ * Extends the base IChatBotWebPartProps with a required WebPartContext.
+ */
 export interface IChatWidgetProps {
+  /** The SPFx WebPartContext; provides AAD token provider and user information. */
   context: WebPartContext;
+
+  /**
+   * Published Copilot Studio or Azure Bot Service iframe URL.
+   * When non-empty the component skips WebChat SDK initialization and renders
+   * the URL directly inside an <iframe>.
+   */
   agentUrl?: string;
+
+  /**
+   * Direct Line token endpoint URL.
+   * Used when `agentUrl` is not provided; the component GETs a conversation
+   * token from this URL before rendering the BotFramework WebChat SDK.
+   */
   tokenEndpointUrl: string;
+
+  /** Text label shown in the widget header bar. */
   title: string;
+
+  /** Height of the widget in pixels. */
   height: number;
+
+  /** Width of the widget in pixels. */
   width: number;
 }
 
+/**
+ * Augment the global Window type so TypeScript recognises `window.WebChat`
+ * after the BotFramework WebChat bundle is dynamically loaded from CDN.
+ */
 declare global {
   interface Window {
     WebChat: any;
   }
 }
 
+/**
+ * ChatWidget
+ *
+ * Main exported component rendered by ChatBotWebPartWebPart.
+ * Manages its own open/minimised state and the lazy initialisation of the
+ * BotFramework WebChat SDK.
+ *
+ * @param props - Configuration props forwarded from the SPFx web part class.
+ */
 export default function ChatWidget(props: IChatWidgetProps) {
+  /** Controls whether the widget body is visible (true) or minimised (false). */
   const [open, setOpen] = React.useState(true);
+
+  /**
+   * Tracks whether the BotFramework WebChat SDK has been rendered.
+   * Prevents re-initialisation on subsequent re-renders.
+   */
   const [initialized, setInitialized] = React.useState(false);
+
+  /** Ref to the <div> that WebChat.renderWebChat() mounts the chat UI into. */
   const hostRef = React.useRef<HTMLDivElement>(null);
+
+  /** Trim whitespace so empty strings are treated correctly throughout the component. */
   const trimmedAgentUrl = (props.agentUrl || "").trim();
+
+  /** True when the user has configured an agent URL; activates iframe rendering mode. */
   const useIframeAgent = trimmedAgentUrl.length > 0;
 
+  /**
+   * initChat
+   *
+   * Async function (memoised with useCallback) that bootstraps the BotFramework
+   * WebChat SDK and renders it into `hostRef.current`.
+   *
+   * Execution steps:
+   *  1. Guard: skip if using iframe mode, already initialized, or DOM ref is not ready.
+   *  2. Guard: validate that a token endpoint URL has been configured.
+   *  3. Dynamically load the BotFramework WebChat bundle from the public CDN if it is
+   *     not already present on the page (avoids duplicate script loading).
+   *  4. Obtain a Direct Line conversation token from the configured token endpoint.
+   *  5. Acquire an AAD token provider for the current SharePoint user.
+   *  6. Create a WebChat store with middleware that intercepts OAuth card activities
+   *     and performs a silent token exchange using the user's AAD token, enabling SSO.
+   *  7. Render the WebChat component into the host <div>.
+   */
   const initChat = React.useCallback(async () => {
+    // Skip initialisation when iframe mode is active (no SDK needed).
     if (useIframeAgent) return;
+    // Prevent double-initialization on re-renders.
     if (initialized || !hostRef.current) return;
 
     if (!props.tokenEndpointUrl || !props.tokenEndpointUrl.trim()) {

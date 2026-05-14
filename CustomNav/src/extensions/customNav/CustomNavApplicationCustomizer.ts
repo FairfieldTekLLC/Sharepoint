@@ -1,50 +1,112 @@
+/**
+ * CustomNavApplicationCustomizer.ts
+ *
+ * SPFx Application Customizer that injects a tenant-aware navigation bar into
+ * the current SharePoint page. The extension prefers the Top placeholder,
+ * falls back to Bottom when Top is unavailable, and finally falls back to a
+ * fixed body-level host so the navigation still appears on pages without a
+ * compatible placeholder surface.
+ *
+ * High-level responsibilities:
+ * - Acquire a Microsoft Graph client and load accessible SharePoint sites.
+ * - Cache the site list in localStorage for a short period to reduce Graph calls.
+ * - Filter personal/team sites according to extension properties.
+ * - Build a tree from site URLs and render nested dropdown/flyout menus.
+ * - Inject the CSS required for layout and interaction once per page.
+ * - Bind click/keyboard handlers for menu open/close behavior.
+ */
 import { BaseApplicationCustomizer, PlaceholderContent, PlaceholderName } from '@microsoft/sp-application-base';
 import { MSGraphClientV3 } from '@microsoft/sp-http';
 import SiteSearchService, { ISiteHit } from '../services/SiteSearchService';
 
+/**
+ * Property bag for the CustomNav extension.
+ *
+ * The interface is intentionally empty because several optional properties are
+ * read through narrower helper interfaces below, depending on which feature is
+ * being configured.
+ */
 export interface ICustomNavApplicationCustomizerProperties {}
 
+/** Node in the derived site tree used to render nested navigation menus. */
 interface ISiteNode {
+  /** Site represented by the current menu node. */
   site: ISiteHit;
+  /** Immediate child sites whose URL path is nested under the current site. */
   children: ISiteNode[];
 }
 
+/** Configurable external link rendered alongside the site tree. */
 interface IExternalLink {
+  /** Link text displayed to the user. */
   title: string;
+  /** Absolute http/https URL. */
   url: string;
+  /** Browser target for navigation. */
   target: '_self' | '_blank';
 }
 
+/** Optional filtering properties read from the extension manifest configuration. */
 interface INavFilterProperties {
+  /** Hide OneDrive/personal sites when true. Defaults to true when omitted. */
   hidePersonalSites?: boolean;
+  /** Hide team sites matching configured path prefixes when true. Defaults to true when omitted. */
   hideTeamSites?: boolean;
+  /** Path prefixes that identify team sites, for example ['/teams/']. */
   teamSitePathPrefixes?: string[];
 }
 
+/** Cached site payload stored in localStorage. */
 interface ICachedMenuData {
+  /** Epoch milliseconds when the cache entry was written. */
   timestamp: number;
+  /** Site results returned from Graph and filtered later at render time. */
   sites: ISiteHit[];
 }
 
+/** Window augmentation used to prevent duplicate extension initialisation on a page. */
 interface ICustomNavWindow extends Window {
   __customNavInitialized?: boolean;
 }
 
+/**
+ * CustomNavApplicationCustomizer
+ *
+ * Main extension class. Keeps enough DOM state to re-render when placeholders
+ * change and when cached/remote site data becomes available.
+ */
 export default class CustomNavApplicationCustomizer
   extends BaseApplicationCustomizer<ICustomNavApplicationCustomizerProperties> {
 
+  /** Cache lifetime for the locally stored site list: 2 minutes. */
   private static readonly MENU_CACHE_TTL_MS = 2 * 60 * 1000;
 
+  /** Placeholder host provided by SPFx when Top or Bottom is available. */
   private _placeholder: PlaceholderContent | undefined;
+  /** Fixed-position fallback host used when no SPFx placeholder is available. */
   private _fallbackHost: HTMLDivElement | undefined;
+  /** Root element containing the navigation DOM tree. */
   private _navHost: HTMLDivElement | undefined;
+  /** Injected <style> element containing the menu CSS. */
   private _styleTag: HTMLStyleElement | undefined;
+  /** Prevents binding the same click/keyboard handlers more than once. */
   private _menuInteractionsBound = false;
 
+  /**
+   * Placeholder change callback.
+   * Re-renders when SPFx reports that placeholder availability has changed.
+   */
   private _onPlaceholdersChanged = (): void => {
     this._render().catch(() => undefined);
   };
 
+  /**
+   * onInit()
+   *
+   * SPFx lifecycle hook called once when the extension is initialised.
+   * Guards against duplicate initialisation on the same page, subscribes to
+   * placeholder changes, and triggers the first render.
+   */
   public onInit(): Promise<void> {
     const navWindow = window as ICustomNavWindow;
     if (navWindow.__customNavInitialized) {
@@ -59,10 +121,17 @@ export default class CustomNavApplicationCustomizer
     return Promise.resolve();
   }
 
+  /**
+   * _render()
+   *
+   * Resolves the best available mount host, renders an immediate fallback shell,
+   * then upgrades the UI once a Graph client becomes available.
+   */
   private _render = async (): Promise<void> => {
     let mountHost: HTMLElement;
 
     if (!this._placeholder) {
+      // Reset placeholder-specific DOM references when SPFx disposes the host.
       const onDispose = (): void => {
         this._navHost?.remove();
         this._navHost = undefined;
@@ -87,6 +156,7 @@ export default class CustomNavApplicationCustomizer
     }
 
     if (this._placeholder) {
+      // Prefer the framework placeholder host when available and remove any stale fallback host.
       if (this._fallbackHost) {
         this._fallbackHost.remove();
         this._fallbackHost = undefined;
@@ -94,6 +164,7 @@ export default class CustomNavApplicationCustomizer
       mountHost = this._placeholder.domElement;
     } else {
       if (!this._fallbackHost) {
+        // Body fallback keeps navigation visible even on pages without placeholders.
         this._fallbackHost = document.createElement('div');
         this._fallbackHost.id = 'custom-nav-fallback-host';
         this._fallbackHost.style.position = 'fixed';
@@ -112,14 +183,22 @@ export default class CustomNavApplicationCustomizer
 
     try {
       const graphClient: MSGraphClientV3 =
-        await this.context.msGraphClientFactory.getClient('3'); // MSGraphClientV3 usage 【7-3cc616】
+        await this.context.msGraphClientFactory.getClient('3');
       this._renderNav(mountHost, graphClient);
     } catch (error) {
       // Keep fallback nav visible even if Graph cannot be initialized.
       console.warn('CustomNav: Graph client unavailable, keeping fallback nav.', error);
     }
-  }
+  };
 
+  /**
+   * _renderNav()
+   *
+   * Renders the navigation shell for one of three states:
+   * - no Graph client yet: temporary "unavailable" placeholder
+   * - cached data available: immediate menu render from local cache
+   * - remote load required: loading state followed by async menu render
+   */
   private _renderNav(container: HTMLElement, graphClient?: MSGraphClientV3): void {
     if (!this._navHost) {
       this._navHost = document.createElement('div');
@@ -142,6 +221,7 @@ export default class CustomNavApplicationCustomizer
 
     const service = new SiteSearchService(graphClient);
 
+    // Prefer warm cache for faster first paint and fewer Graph requests.
     const cachedSites = this._getCachedSites();
     if (cachedSites) {
       this._renderSiteMenu(cachedSites);
@@ -170,6 +250,12 @@ export default class CustomNavApplicationCustomizer
       });
   }
 
+  /**
+   * _renderSiteMenu()
+   *
+   * Normalises and filters the site set, builds the hierarchical tree, then
+   * renders root site nodes and configured external links into the nav host.
+   */
   private _renderSiteMenu(sites: ISiteHit[]): void {
     if (!this._navHost) {
       return;
@@ -194,6 +280,12 @@ export default class CustomNavApplicationCustomizer
     this._bindMenuInteractions();
   }
 
+  /**
+   * _getExternalLinks()
+   *
+   * Reads the optional externalLinks property, trims values, normalises target,
+   * and keeps only well-formed http/https links with non-empty titles.
+   */
   private _getExternalLinks(): IExternalLink[] {
     const props = this.properties as { externalLinks?: Array<{ title?: string; url?: string; target?: string }> };
     const links = props?.externalLinks;
@@ -220,6 +312,7 @@ export default class CustomNavApplicationCustomizer
       });
   }
 
+  /** Renders a single external-link list item. */
   private _renderExternalLinkItem(link: IExternalLink): HTMLLIElement {
     const item = document.createElement('li');
     item.className = 'custom-nav-item custom-nav-item-external';
@@ -242,6 +335,13 @@ export default class CustomNavApplicationCustomizer
     return item;
   }
 
+  /**
+   * _buildSiteTree()
+   *
+   * Converts a flat list of sites into a parent/child tree based on URL path
+   * nesting. Parents are discovered with _findParentUrl(); nodes are then sorted
+   * alphabetically by their display label at every depth.
+   */
   private _buildSiteTree(sites: ISiteHit[]): ISiteNode[] {
     const byUrl = new Map<string, ISiteNode>();
     sites.forEach((site) => {
@@ -276,6 +376,12 @@ export default class CustomNavApplicationCustomizer
     return roots;
   }
 
+  /**
+   * _renderSiteNode()
+   *
+   * Renders one site node recursively. Root nodes use the top-level link/toggle
+   * classes; nested nodes use dropdown/flyout styles.
+   */
   private _renderSiteNode(node: ISiteNode, depth: number): HTMLLIElement {
     const item = document.createElement('li');
     item.className = 'custom-nav-item';
@@ -315,6 +421,13 @@ export default class CustomNavApplicationCustomizer
     return item;
   }
 
+  /**
+   * _bindMenuInteractions()
+   *
+   * Attaches one-time event handlers that manage menu open/close behavior.
+   * Clicks on toggles open a submenu, clicks outside close all menus, and Escape
+   * also closes all open menus.
+   */
   private _bindMenuInteractions(): void {
     if (!this._navHost || this._menuInteractionsBound) {
       return;
@@ -370,6 +483,7 @@ export default class CustomNavApplicationCustomizer
     });
   }
 
+  /** Closes sibling menus when one menu item is opened. */
   private _closeSiblingMenus(item: HTMLElement): void {
     const parent = item.parentElement;
     if (!parent) {
@@ -388,6 +502,7 @@ export default class CustomNavApplicationCustomizer
     });
   }
 
+  /** Closes every open menu and resets aria-expanded on all toggles. */
   private _closeAllMenus(): void {
     if (!this._navHost) {
       return;
@@ -402,6 +517,7 @@ export default class CustomNavApplicationCustomizer
     });
   }
 
+  /** Builds the localStorage cache key, scoped by site, user, and active filters. */
   private _getCacheKey(): string {
     const userKey = (this.context.pageContext.user.loginName || 'anonymous').toLowerCase();
     const siteKey = this.context.pageContext.site.absoluteUrl.toLowerCase();
@@ -409,6 +525,7 @@ export default class CustomNavApplicationCustomizer
     return `custom-nav-menu-cache::${siteKey}::${userKey}::${filterKey}`;
   }
 
+  /** Encodes filter settings into the cache key so different filter combinations do not share stale data. */
   private _getFilterCacheKey(): string {
     const filterProps = this.properties as INavFilterProperties;
     const hidePersonal = filterProps.hidePersonalSites !== false;
@@ -417,6 +534,7 @@ export default class CustomNavApplicationCustomizer
     return `${hidePersonal ? 'hp1' : 'hp0'}-${hideTeam ? 'ht1' : 'ht0'}-${prefixes}`;
   }
 
+  /** Applies personal-site and team-site filtering rules to a site URL. */
   private _shouldIncludeSite(url: string): boolean {
     const filterProps = this.properties as INavFilterProperties;
     const hidePersonalSites = filterProps.hidePersonalSites !== false;
@@ -443,6 +561,7 @@ export default class CustomNavApplicationCustomizer
     return true;
   }
 
+  /** Normalises configured team-site path prefixes into lowercase leading-slash paths. */
   private _getTeamPathPrefixes(): string[] {
     const filterProps = this.properties as INavFilterProperties;
     const configured = Array.isArray(filterProps.teamSitePathPrefixes)
@@ -455,6 +574,7 @@ export default class CustomNavApplicationCustomizer
       .map((prefix) => (prefix.startsWith('/') ? prefix : `/${prefix}`));
   }
 
+  /** Reads a non-expired cached site list from localStorage when available. */
   private _getCachedSites(): ISiteHit[] | undefined {
     try {
       const raw = window.localStorage.getItem(this._getCacheKey());
@@ -478,6 +598,7 @@ export default class CustomNavApplicationCustomizer
     }
   }
 
+  /** Writes the current site list to localStorage, ignoring storage failures silently. */
   private _setCachedSites(sites: ISiteHit[]): void {
     try {
       const payload: ICachedMenuData = {
@@ -491,14 +612,20 @@ export default class CustomNavApplicationCustomizer
     }
   }
 
+  /** Resolves the best display label for a site. */
   private _siteLabel(site: ISiteHit): string {
     return site.displayName || site.name || site.webUrl || 'Site';
   }
 
+  /** Normalises URLs for stable comparisons by trimming a trailing slash and lowercasing. */
   private _normalizeUrl(url: string): string {
     return url.replace(/\/$/, '').toLowerCase();
   }
 
+  /**
+   * Finds the nearest known parent URL by walking the current URL path upward.
+   * Returns undefined when the site is a root node.
+   */
   private _findParentUrl(url: string, knownUrls: Set<string>): string | undefined {
     const parsed = new URL(url);
     const parts = parsed.pathname.split('/').filter(Boolean);
@@ -514,6 +641,13 @@ export default class CustomNavApplicationCustomizer
     return undefined;
   }
 
+  /**
+   * _ensureStyles()
+   *
+   * Injects the CSS required by the navigation exactly once per page instance.
+   * The stylesheet covers desktop dropdowns, nested flyouts, hover behavior, and
+   * a mobile-friendly stacked layout for narrower viewports.
+   */
   private _ensureStyles(): void {
     if (this._styleTag) {
       return;
