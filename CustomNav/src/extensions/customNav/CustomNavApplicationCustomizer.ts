@@ -44,6 +44,16 @@ interface IExternalLink {
   url: string;
   /** Browser target for navigation. */
   target: '_self' | '_blank';
+  /** Optional nested static links rendered as dropdown/flyout children. */
+  children: IExternalLink[];
+}
+
+/** Raw external-link config read from extension properties before validation/normalization. */
+interface IExternalLinkConfig {
+  title?: string;
+  url?: string;
+  target?: string;
+  children?: IExternalLinkConfig[];
 }
 
 /** Optional filtering properties read from the extension manifest configuration. */
@@ -274,7 +284,7 @@ export default class CustomNavApplicationCustomizer
     const list = document.createElement('ul');
     list.className = 'custom-nav-list custom-nav-list-root';
     tree.forEach((node) => list.appendChild(this._renderSiteNode(node, 0)));
-    externalLinks.forEach((link) => list.appendChild(this._renderExternalLinkItem(link)));
+    externalLinks.forEach((link) => list.appendChild(this._renderExternalLinkItem(link, 0)));
 
     this._navHost.appendChild(list);
     this._bindMenuInteractions();
@@ -287,7 +297,7 @@ export default class CustomNavApplicationCustomizer
    * and keeps only well-formed http/https links with non-empty titles.
    */
   private _getExternalLinks(): IExternalLink[] {
-    const props = this.properties as { externalLinks?: Array<{ title?: string; url?: string; target?: string }> };
+    const props = this.properties as { externalLinks?: IExternalLinkConfig[] };
     const links = props?.externalLinks;
 
     if (!Array.isArray(links)) {
@@ -295,33 +305,52 @@ export default class CustomNavApplicationCustomizer
     }
 
     return links
-      .map((link) => {
-        const target: '_self' | '_blank' = link.target === '_self' ? '_self' : '_blank';
-        return {
-          title: (link.title || '').trim(),
-          url: (link.url || '').trim(),
-          target
-        };
-      })
-      .filter((link) => {
-        if (!link.title || !link.url) {
-          return false;
-        }
-
-        return /^https?:\/\//i.test(link.url);
-      });
+      .map((link) => this._normalizeExternalLink(link))
+      .filter((link): link is IExternalLink => Boolean(link));
   }
 
-  /** Renders a single external-link list item. */
-  private _renderExternalLinkItem(link: IExternalLink): HTMLLIElement {
+  /** Validates and normalizes one external link entry, including optional nested children. */
+  private _normalizeExternalLink(link: IExternalLinkConfig): IExternalLink | undefined {
+    const target: '_self' | '_blank' = link.target === '_self' ? '_self' : '_blank';
+    const normalized: IExternalLink = {
+      title: (link.title || '').trim(),
+      url: (link.url || '').trim(),
+      target,
+      children: Array.isArray(link.children)
+        ? link.children
+          .map((child) => this._normalizeExternalLink(child))
+          .filter((child): child is IExternalLink => Boolean(child))
+        : []
+    };
+
+    if (!normalized.title || !normalized.url) {
+      return undefined;
+    }
+
+    if (!/^https?:\/\//i.test(normalized.url)) {
+      return undefined;
+    }
+
+    return normalized;
+  }
+
+  /** Renders one external-link node recursively with dropdown/flyout support. */
+  private _renderExternalLinkItem(link: IExternalLink, depth: number): HTMLLIElement {
     const item = document.createElement('li');
     item.className = 'custom-nav-item custom-nav-item-external';
+
+    const hasChildren = link.children.length > 0;
+    if (hasChildren) {
+      item.classList.add('has-children');
+    }
 
     const row = document.createElement('div');
     row.className = 'custom-nav-row';
 
     const anchor = document.createElement('a');
-    anchor.className = 'custom-nav-link custom-nav-link-external';
+    anchor.className = depth === 0
+      ? 'custom-nav-link custom-nav-link-external'
+      : 'custom-nav-dropdown-link custom-nav-link-external';
     anchor.href = link.url;
     anchor.textContent = link.title;
     anchor.title = link.title;
@@ -331,7 +360,27 @@ export default class CustomNavApplicationCustomizer
     }
 
     row.appendChild(anchor);
+
+    if (hasChildren) {
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = depth === 0 ? 'custom-nav-toggle' : 'custom-nav-flyout-toggle';
+      toggle.setAttribute('aria-label', `Toggle submenu for ${link.title}`);
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.textContent = depth === 0 ? '▾' : '▸';
+      row.appendChild(toggle);
+    }
+
     item.appendChild(row);
+
+    if (hasChildren) {
+      const dropdown = document.createElement('ul');
+      dropdown.className = 'custom-nav-dropdown';
+      dropdown.setAttribute('data-depth', String(depth + 1));
+      link.children.forEach((child) => dropdown.appendChild(this._renderExternalLinkItem(child, depth + 1)));
+      item.appendChild(dropdown);
+    }
+
     return item;
   }
 
@@ -673,10 +722,22 @@ export default class CustomNavApplicationCustomizer
         gap: 2px;
         flex-wrap: wrap;
         align-items: center;
+        overflow: visible;
       }
 
       .custom-nav-item {
         position: relative;
+        z-index: 1;
+      }
+
+      .custom-nav-item.is-open {
+        z-index: 40;
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        .custom-nav-item:hover {
+          z-index: 40;
+        }
       }
 
       .custom-nav-row {
@@ -693,7 +754,7 @@ export default class CustomNavApplicationCustomizer
       }
 
       .custom-nav-link {
-        padding: 6px 10px;
+        padding: 4px 8px;
         font-size: 14px;
         border-radius: 2px;
       }
@@ -714,14 +775,14 @@ export default class CustomNavApplicationCustomizer
         background: transparent;
         color: #ffffff;
         cursor: pointer;
-        padding: 6px 6px;
+        padding: 4px 4px;
         line-height: 1;
         transition: transform 0.18s ease;
       }
 
       .custom-nav-flyout-toggle {
         font-size: 11px;
-        padding-right: 10px;
+        padding-right: 8px;
       }
 
       .custom-nav-item.is-open > .custom-nav-row > .custom-nav-toggle {
@@ -744,6 +805,7 @@ export default class CustomNavApplicationCustomizer
         background: #1a2558;
         border: 1px solid #0b1230;
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+        z-index: 50;
       }
 
       .custom-nav-dropdown .custom-nav-dropdown {
@@ -762,7 +824,7 @@ export default class CustomNavApplicationCustomizer
       }
 
       .custom-nav-dropdown-link {
-        padding: 7px 12px;
+        padding: 5px 10px;
         font-size: 13px;
       }
 
