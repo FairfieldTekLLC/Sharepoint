@@ -76,4 +76,18 @@ export interface ILinksWebPartProps {
    * Configurable via color picker in the property pane; defaults to '#0e0e0e'.
    */
   linkTextColor: string;
+
+  /**
+   * CSS color value for anchor text on hover inside the link list.
+   * Applied as the `--links-text-hover-color` CSS custom property.
+   * Configurable via color picker in the property pane; defaults to '#0645ad'.
+   */
+  linkHoverColor: string;
+
+  /**
+   * CSS color value for visited anchor text inside the link list.
+   * Applied as the `--links-text-visited-color` CSS custom property.
+   * Configurable via color picker in the property pane; defaults to '#551a8b'.
+   */
+  linkVisitedColor: string;
 }

@@ -35,6 +35,8 @@ type LinksStyleVars = React.CSSProperties & {
   '--links-background': string;
   '--links-titlebar-bg': string;
   '--links-text-color': string;
+  '--links-text-hover-color': string;
+  '--links-text-visited-color': string;
 };
 
 /**
@@ -204,7 +206,9 @@ export default function LinksWebPart(props: ILinksWebPartProps): JSX.Element {
   const containerStyle: LinksStyleVars = {
     '--links-background': props.backgroundColor,
     '--links-titlebar-bg': props.titleBarColor,
-    '--links-text-color': props.linkTextColor
+    '--links-text-color': props.linkTextColor,
+    '--links-text-hover-color': props.linkHoverColor,
+    '--links-text-visited-color': props.linkVisitedColor
   };
 
   return (

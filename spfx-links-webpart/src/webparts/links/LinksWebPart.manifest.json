@@ -26,7 +26,9 @@
       "maxItems": 10,
       "showDescription": true,
       "openInNewTab": true,
-      "category": ""
+      "category": "",
+      "linkColor": "",
+      "followedLinkColor": ""
     }
   }]
 }

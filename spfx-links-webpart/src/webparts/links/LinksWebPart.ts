@@ -18,10 +18,15 @@ import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import {
   IPropertyPaneConfiguration,
   PropertyPaneDropdown,
+  PropertyPaneLabel,
   PropertyPaneSlider,
   PropertyPaneTextField,
   PropertyPaneToggle
 } from '@microsoft/sp-property-pane';
+import {
+  PropertyFieldColorPicker,
+  PropertyFieldColorPickerStyle
+} from '@pnp/spfx-property-controls/lib/PropertyFieldColorPicker';
 
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 import { IPropertyPaneDropdownOption } from '@microsoft/sp-property-pane';
@@ -62,6 +67,12 @@ export interface ILinksWebPartProps {
    * When non-empty, only items in the specified category are fetched.
    */
   category: string;
+
+  /** Optional custom color applied to rendered link anchors. */
+  linkColor?: string;
+
+  /** Optional custom color applied to followed (visited) links. */
+  followedLinkColor?: string;
 }
 
 /**
@@ -139,6 +150,8 @@ export default class LinksWebPart extends BaseClientSideWebPart<ILinksWebPartPro
       showDescription: this.properties.showDescription ?? true,
       openInNewTab: this.properties.openInNewTab ?? true,
       category: this.properties.category ?? '',
+      linkColor: this.properties.linkColor,
+      followedLinkColor: this.properties.followedLinkColor,
       description: this.properties.description,
       isDarkTheme: false,
       environmentMessage: this.context.isServedFromLocalhost ? 'Local' : 'Remote',
@@ -246,7 +259,30 @@ export default class LinksWebPart extends BaseClientSideWebPart<ILinksWebPartPro
             {
               groupName: 'Display',
               groupFields: [
+                PropertyPaneLabel('buildInfoLabel', {
+                  text: 'Build: 1.0.0.1 (if color options are missing, refresh/re-add web part).'
+                }),
                 PropertyPaneTextField('title', { label: 'Title' }),
+                PropertyFieldColorPicker('linkColor', {
+                  label: 'Link color',
+                  selectedColor: this.properties.linkColor,
+                  onPropertyChange: this.onPropertyPaneFieldChanged,
+                  properties: this.properties,
+                  disabled: false,
+                  style: PropertyFieldColorPickerStyle.Inline,
+                  showPreview: true,
+                  key: 'linkColorField'
+                }),
+                PropertyFieldColorPicker('followedLinkColor', {
+                  label: 'Followed link color',
+                  selectedColor: this.properties.followedLinkColor,
+                  onPropertyChange: this.onPropertyPaneFieldChanged,
+                  properties: this.properties,
+                  disabled: false,
+                  style: PropertyFieldColorPickerStyle.Inline,
+                  showPreview: true,
+                  key: 'followedLinkColorField'
+                }),
                 PropertyPaneToggle('showDescription', { label: 'Show description' }),
                 PropertyPaneToggle('openInNewTab', { label: 'Open in new tab' })
               ]

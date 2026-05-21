@@ -15,6 +15,7 @@ import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 import { ILinksProps } from './ILinksProps';
+import styles from './Links.module.scss';
 
 /**
  * Raw shape of a link item row returned by the SharePoint REST API.
@@ -112,6 +113,11 @@ export default function Links(props: ILinksProps): JSX.Element {
   /** Non-empty when a fetch error occurs; shown in red text above the list. */
   const [error, setError] = useState<string>('');
 
+  const rootStyle: React.CSSProperties & Record<string, string | undefined> = {
+    '--customLinkColor': props.linkColor,
+    '--customVisitedLinkColor': props.followedLinkColor
+  };
+
   /**
    * Data-fetch effect.
    * Re-runs when listId, maxItems, or category props change.
@@ -154,7 +160,7 @@ export default function Links(props: ILinksProps): JSX.Element {
   }, [props.listId, props.maxItems, props.category]);
 
   return (
-    <div>
+    <div className={styles.links} style={rootStyle}>
       {props.title && <h2>{props.title}</h2>}
 
       {!props.listId && <div>Please edit the web part and select a list.</div>}

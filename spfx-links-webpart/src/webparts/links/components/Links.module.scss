@@ -22,8 +22,13 @@
 .links {
   a {
     text-decoration: none;
+    color: var(--customLinkColor, "[theme:link, default:#03787c]");
     color: "[theme:link, default:#03787c]";
     color: var(--link); // note: CSS Custom Properties support is limited to modern browsers only
+
+    &:visited {
+      color: var(--customVisitedLinkColor, #551a8b);
+    }
 
     &:hover {
       text-decoration: underline;

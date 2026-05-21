@@ -3,7 +3,7 @@
   "solution": {
     "name": "links-webpart-client-side-solution",
     "id": "cc3a4a06-ed48-49e3-9656-ba6acf7a93cc",
-    "version": "1.0.0.0",
+    "version": "1.0.0.1",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,
@@ -30,7 +30,7 @@
         "title": "links-webpart Feature",
         "description": "The feature that activates elements of the links-webpart solution.",
         "id": "1188eaca-e8ae-4e4f-816a-31372927065e",
-        "version": "1.0.0.0"
+        "version": "1.0.0.1"
       }
     ]
   },

@@ -64,6 +64,12 @@ export interface ILinksProps {
    */
   category: string;
 
+  /** Optional custom color applied to rendered link anchors. */
+  linkColor?: string;
+
+  /** Optional custom color applied to followed (visited) links. */
+  followedLinkColor?: string;
+
   /** Optional secondary description text (currently unused by the Links component). */
   description?: string;
 

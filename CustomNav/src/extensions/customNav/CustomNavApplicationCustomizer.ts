@@ -11,6 +11,7 @@
  * - Acquire a Microsoft Graph client and load accessible SharePoint sites.
  * - Cache the site list in localStorage for a short period to reduce Graph calls.
  * - Filter personal/team sites according to extension properties.
+ * - Optionally render only configured custom nav items without loading sites.
  * - Build a tree from site URLs and render nested dropdown/flyout menus.
  * - Inject the CSS required for layout and interaction once per page.
  * - Bind click/keyboard handlers for menu open/close behavior.
@@ -22,11 +23,21 @@ import SiteSearchService, { ISiteHit } from '../services/SiteSearchService';
 /**
  * Property bag for the CustomNav extension.
  *
- * The interface is intentionally empty because several optional properties are
- * read through narrower helper interfaces below, depending on which feature is
- * being configured.
+ * The extension accepts a small set of optional properties for filtering the
+ * built-in site list and configuring additional custom links.
  */
-export interface ICustomNavApplicationCustomizerProperties {}
+export interface ICustomNavApplicationCustomizerProperties {
+  /** When true, skip Graph/site loading and render only custom nav items. */
+  showOnlyCustomNavMenuItems?: boolean;
+  /** Optional external links rendered alongside or instead of site-derived items. */
+  externalLinks?: IExternalLinkConfig[];
+  /** Hide OneDrive/personal sites when true. Defaults to true when omitted. */
+  hidePersonalSites?: boolean;
+  /** Hide team sites matching configured path prefixes when true. Defaults to true when omitted. */
+  hideTeamSites?: boolean;
+  /** Path prefixes that identify team sites, for example ['/teams/']. */
+  teamSitePathPrefixes?: string[];
+}
 
 /** Node in the derived site tree used to render nested navigation menus. */
 interface ISiteNode {
@@ -54,16 +65,6 @@ interface IExternalLinkConfig {
   url?: string;
   target?: string;
   children?: IExternalLinkConfig[];
-}
-
-/** Optional filtering properties read from the extension manifest configuration. */
-interface INavFilterProperties {
-  /** Hide OneDrive/personal sites when true. Defaults to true when omitted. */
-  hidePersonalSites?: boolean;
-  /** Hide team sites matching configured path prefixes when true. Defaults to true when omitted. */
-  hideTeamSites?: boolean;
-  /** Path prefixes that identify team sites, for example ['/teams/']. */
-  teamSitePathPrefixes?: string[];
 }
 
 /** Cached site payload stored in localStorage. */
@@ -217,6 +218,27 @@ export default class CustomNavApplicationCustomizer
 
     this._ensureStyles();
 
+    if (this._shouldShowOnlyCustomNavMenuItems()) {
+      const externalLinks = this._getExternalLinks();
+
+      this._navHost.innerHTML = '';
+      if (!externalLinks.length) {
+        const empty = document.createElement('div');
+        empty.className = 'custom-nav-message';
+        empty.textContent = 'No custom navigation items are configured.';
+        this._navHost.appendChild(empty);
+      } else {
+        const list = document.createElement('ul');
+        list.className = 'custom-nav-list custom-nav-list-root';
+        externalLinks.forEach((link) => list.appendChild(this._renderExternalLinkItem(link, 0)));
+        this._navHost.appendChild(list);
+        this._bindMenuInteractions();
+      }
+
+      container.replaceChildren(this._navHost);
+      return;
+    }
+
     this._navHost.innerHTML = '';
     this._navHost.className = 'custom-nav-shell';
 
@@ -297,8 +319,7 @@ export default class CustomNavApplicationCustomizer
    * and keeps only well-formed http/https links with non-empty titles.
    */
   private _getExternalLinks(): IExternalLink[] {
-    const props = this.properties as { externalLinks?: IExternalLinkConfig[] };
-    const links = props?.externalLinks;
+    const links = this.properties.externalLinks;
 
     if (!Array.isArray(links)) {
       return [];
@@ -576,16 +597,21 @@ export default class CustomNavApplicationCustomizer
 
   /** Encodes filter settings into the cache key so different filter combinations do not share stale data. */
   private _getFilterCacheKey(): string {
-    const filterProps = this.properties as INavFilterProperties;
+    const filterProps = this.properties;
     const hidePersonal = filterProps.hidePersonalSites !== false;
     const hideTeam = filterProps.hideTeamSites !== false;
     const prefixes = this._getTeamPathPrefixes().join(',');
     return `${hidePersonal ? 'hp1' : 'hp0'}-${hideTeam ? 'ht1' : 'ht0'}-${prefixes}`;
   }
 
+  /** Returns true when the nav should render only custom links and skip site loading. */
+  private _shouldShowOnlyCustomNavMenuItems(): boolean {
+    return this.properties.showOnlyCustomNavMenuItems === true;
+  }
+
   /** Applies personal-site and team-site filtering rules to a site URL. */
   private _shouldIncludeSite(url: string): boolean {
-    const filterProps = this.properties as INavFilterProperties;
+    const filterProps = this.properties;
     const hidePersonalSites = filterProps.hidePersonalSites !== false;
     const hideTeamSites = filterProps.hideTeamSites !== false;
     const parsed = new URL(url);
@@ -612,7 +638,7 @@ export default class CustomNavApplicationCustomizer
 
   /** Normalises configured team-site path prefixes into lowercase leading-slash paths. */
   private _getTeamPathPrefixes(): string[] {
-    const filterProps = this.properties as INavFilterProperties;
+    const filterProps = this.properties;
     const configured = Array.isArray(filterProps.teamSitePathPrefixes)
       ? filterProps.teamSitePathPrefixes
       : ['/teams/'];

@@ -24,6 +24,8 @@
   --links-background: #f7f7f7;
   --links-titlebar-bg: #d1d3aa;
   --links-text-color: #0e0e0e;
+  --links-text-hover-color: #0645ad;
+  --links-text-visited-color: #551a8b;
 
   display: flex;
   flex-direction: column;
@@ -113,7 +115,12 @@
 }
 
 .linkItem:hover {
+  color: var(--links-text-hover-color);
   text-decoration: underline;
+}
+
+.linkItem:visited {
+  color: var(--links-text-visited-color);
 }
 
 .linkItemDisabled {

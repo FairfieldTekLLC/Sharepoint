@@ -8,6 +8,8 @@
  * Property pane groups:
  *  Data    — listTitle, maxItems
  *  Display — backgroundColor, titleBarColor, linkTextColor,
+ *             linkHoverColor,
+ *             linkVisitedColor,
  *             openInNewTab, showTopText, showDescription
  */
 import * as React from 'react';
@@ -60,6 +62,12 @@ export interface ILinksWebPartWebPartProps {
 
   /** CSS color value for anchor text. Applied as --links-text-color. */
   linkTextColor: string;
+
+  /** CSS color value for anchor hover text. Applied as --links-text-hover-color. */
+  linkHoverColor: string;
+
+  /** CSS color value for visited anchor text. Applied as --links-text-visited-color. */
+  linkVisitedColor: string;
 }
 
 export default class LinksWebPartWebPart extends BaseClientSideWebPart<ILinksWebPartWebPartProps> {
@@ -87,6 +95,8 @@ export default class LinksWebPartWebPart extends BaseClientSideWebPart<ILinksWeb
   if (!this.properties.backgroundColor) this.properties.backgroundColor = '#f7f7f7';
   if (!this.properties.titleBarColor) this.properties.titleBarColor = '#d1d3aa';
   if (!this.properties.linkTextColor) this.properties.linkTextColor = '#0e0e0e';
+  if (!this.properties.linkHoverColor) this.properties.linkHoverColor = '#0645ad';
+  if (!this.properties.linkVisitedColor) this.properties.linkVisitedColor = '#551a8b';
 
   const element: React.ReactElement = React.createElement(
     LinksWebPart, // your component import
@@ -99,7 +109,9 @@ export default class LinksWebPartWebPart extends BaseClientSideWebPart<ILinksWeb
       showDescription: this.properties.showDescription,
       backgroundColor: this.properties.backgroundColor,
       titleBarColor: this.properties.titleBarColor,
-      linkTextColor: this.properties.linkTextColor
+      linkTextColor: this.properties.linkTextColor,
+      linkHoverColor: this.properties.linkHoverColor,
+      linkVisitedColor: this.properties.linkVisitedColor
     }
   );
 
@@ -221,6 +233,8 @@ export default class LinksWebPartWebPart extends BaseClientSideWebPart<ILinksWeb
    *   backgroundColor  — ColorPicker: card background.
    *   titleBarColor    — ColorPicker: category header bar colour.
    *   linkTextColor    — ColorPicker: anchor text colour.
+  *   linkHoverColor   — ColorPicker: anchor hover text colour.
+  *   linkVisitedColor — ColorPicker: visited anchor text colour.
    *   openInNewTab     — Toggle:      open links in new tab.
    *   showTopText      — Toggle:      show IT Hotline callout.
    *   showDescription  — Toggle:      show item descriptions.
@@ -278,6 +292,26 @@ export default class LinksWebPartWebPart extends BaseClientSideWebPart<ILinksWeb
                 debounce: 300,
                 style: PropertyFieldColorPickerStyle.Inline,
                 key: 'linkTextColorField'
+              }),
+              PropertyFieldColorPicker('linkHoverColor', {
+                label: 'Link hover color',
+                selectedColor: this.properties.linkHoverColor,
+                onPropertyChange: this.onPropertyPaneFieldChanged,
+                properties: this.properties,
+                disabled: false,
+                debounce: 300,
+                style: PropertyFieldColorPickerStyle.Inline,
+                key: 'linkHoverColorField'
+              }),
+              PropertyFieldColorPicker('linkVisitedColor', {
+                label: 'Visited link color',
+                selectedColor: this.properties.linkVisitedColor,
+                onPropertyChange: this.onPropertyPaneFieldChanged,
+                properties: this.properties,
+                disabled: false,
+                debounce: 300,
+                style: PropertyFieldColorPickerStyle.Inline,
+                key: 'linkVisitedColorField'
               }),
               PropertyPaneToggle("openInNewTab", {
                 label: "Open links in a new tab"
