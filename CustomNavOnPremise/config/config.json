@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "entry": "./lib/webparts/customNavOnPremise/CustomNavOnPremiseWebPart.js",
+      "manifest": "./src/webparts/customNavOnPremise/CustomNavOnPremiseWebPart.manifest.json",
+      "outputPath": "./dist/custom-nav-on-premise-web-part.js"
+    }
+  ],
+  "externals": {},
+  "localizedResources": {
+    "CustomNavOnPremiseWebPartStrings": "webparts/customNavOnPremise/loc/{locale}.js"
+  }
+}

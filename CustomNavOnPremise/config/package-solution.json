@@ -1,0 +1,11 @@
+{
+  "$schema": "https://dev.office.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "custom-nav-on-premise-client-side-solution",
+    "id": "8a3e1556-da5a-41b4-8ca3-7d1c29bfd620",
+    "version": "1.0.0.5"
+  },
+  "paths": {
+    "zippedPackage": "solution/custom-nav-on-premise-v105.sppkg"
+  }
+}

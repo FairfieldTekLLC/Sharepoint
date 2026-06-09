@@ -4,6 +4,24 @@ import { SPHttpClient, SPHttpClientResponse } from "@microsoft/sp-http";
 import { ICleanDocsProps } from "./ICleanDocsProps";
 import styles from "./CleanDocs.module.scss";
 
+// Represents a single file item rendered in the document table.
+interface DocItem {
+  FileRef: string;
+  FileLeafRef: string;
+  DisplayText?: string;
+  DisplayStartDate?: string;
+  DisplayEndDate?: string;
+  SortOrder?: number | string;
+  DisplayDescription?: string;
+}
+
+const requiredColumns: string[] = ["SortOrder", "DisplayDescription"];
+
+function getMissingColumnFromError(body: string): string | undefined {
+  const match = /field or property '([^']+)' does not exist/i.exec(body);
+  return match?.[1];
+}
+
 // Calls the SharePoint REST API and returns raw item rows from the target document library.
 //
 // Expected behavior:
@@ -15,7 +33,7 @@ async function loadDocs(
   webUrl: string,
   libraryTitle: string,
   maxItems: number
-) {
+): Promise<DocItem[]> {
   // Escape apostrophes in list titles (rare but possible), because list titles are embedded
   // in a single-quoted GetByTitle('...') segment and unescaped apostrophes break the URL.
   const safeTitle = libraryTitle.replace(/'/g, "''");
@@ -30,7 +48,7 @@ async function loadDocs(
   // - FSObjType: used in filter to ensure only files are returned.
   const url =
     `${webUrl}/_api/web/lists/GetByTitle('${safeTitle}')/items` +
-    `?$select=FileRef,FileLeafRef,DisplayText,DisplayStartDate,DisplayEndDate,FSObjType` +
+    `?$select=FileRef,FileLeafRef,DisplayText,DisplayStartDate,DisplayEndDate,SortOrder,DisplayDescription,FSObjType` +
     `&$filter=FSObjType eq 0` +
     `&$top=${maxItems}`;
 
@@ -50,23 +68,28 @@ async function loadDocs(
     // Read the body because SharePoint often includes the real failure reason there
     // (for example: missing field, misspelled library title, permission issue).
     const body = await res.text();
+
+    const missingColumn = getMissingColumnFromError(body);
+    if (missingColumn && requiredColumns.indexOf(missingColumn) >= 0) {
+      throw new Error(
+        `Missing required column '${missingColumn}' in library '${libraryTitle}'. Add the column and try again.`
+      );
+    }
+
     throw new Error(`SharePoint REST error ${res.status}: ${body}`);
   }
 
   // Response shape is { value: [...] } for this endpoint when using metadata=none.
-  const json = await res.json();
-  return json.value;
-}
-
-// Represents a single file item returned from the document library query.
-// Nullable fields are modeled as string | null because SharePoint commonly returns null
-// for empty optional columns.
-interface DocItem {
-  FileRef: string;
-  FileLeafRef: string;
-  DisplayText?: string | null;
-  DisplayStartDate: string | null;
-  DisplayEndDate: string | null;
+  const json = await res.json() as { value: Array<Record<string, unknown>> };
+  return json.value.map(item => ({
+    FileRef: String(item.FileRef ?? ""),
+    FileLeafRef: String(item.FileLeafRef ?? ""),
+    DisplayText: typeof item.DisplayText === "string" ? item.DisplayText : undefined,
+    DisplayStartDate: typeof item.DisplayStartDate === "string" ? item.DisplayStartDate : undefined,
+    DisplayEndDate: typeof item.DisplayEndDate === "string" ? item.DisplayEndDate : undefined,
+    SortOrder: typeof item.SortOrder === "number" || typeof item.SortOrder === "string" ? item.SortOrder : undefined,
+    DisplayDescription: typeof item.DisplayDescription === "string" ? item.DisplayDescription : undefined
+  }));
 }
 
 // Determines which label users see for a document.
@@ -76,6 +99,23 @@ interface DocItem {
 function getDocDisplayName(doc: DocItem): string {
   const displayText = doc.DisplayText?.trim();
   return displayText ? displayText : doc.FileLeafRef;
+}
+
+function getSortOrderValue(doc: DocItem): number {
+  const rawValue = doc.SortOrder;
+
+  if (typeof rawValue === "number" && Number.isFinite(rawValue)) {
+    return rawValue;
+  }
+
+  if (typeof rawValue === "string") {
+    const parsed = Number(rawValue.trim());
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+  }
+
+  return Number.MAX_SAFE_INTEGER;
 }
 
 export const CleanDocs: React.FC<ICleanDocsProps> = ({
@@ -97,9 +137,9 @@ export const CleanDocs: React.FC<ICleanDocsProps> = ({
   React.useEffect(() => {
     loadDocs(spHttpClient, siteUrl, libraryTitle, maxItems)
       .then(items => {
-        // Sort by the same label users see, so visual order aligns with displayed names.
-        // Use case-insensitive comparison for friendlier alphabetical ordering.
+        // Sort by explicit SortOrder first, then by visible name for deterministic ordering.
         const sortedItems = [...items].sort((a, b) =>
+          getSortOrderValue(a) - getSortOrderValue(b) ||
           getDocDisplayName(a).localeCompare(getDocDisplayName(b), undefined, { sensitivity: "base" })
         );
 
@@ -132,6 +172,8 @@ export const CleanDocs: React.FC<ICleanDocsProps> = ({
           ? doc.FileRef
           : new URL(doc.FileRef, window.location.origin).toString();
 
+        const description = doc.DisplayDescription?.trim() || "";
+
         return React.createElement(
           "li",
           { key: doc.FileRef },
@@ -139,6 +181,7 @@ export const CleanDocs: React.FC<ICleanDocsProps> = ({
             "a",
             {
               href: docUrl,
+              title: description,
               // Always open docs in a new tab to keep the current SharePoint page intact.
               target: "_blank",
               rel: "noopener noreferrer",

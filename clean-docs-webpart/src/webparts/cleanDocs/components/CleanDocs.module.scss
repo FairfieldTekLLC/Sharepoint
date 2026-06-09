@@ -5,21 +5,31 @@
   padding: 1em;
   color: "[theme:bodyText, default: #323130]";
 
-  ul {
-    list-style: none;
-    margin: 0;
+  &.teams {
+    font-family: $ms-font-family-fallbacks;
+  }
+}
+
+.cleanDocs ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    margin: 0 0 0.6em;
     padding: 0;
   }
 
-  li a {
+  li:last-child {
+    margin-bottom: 0;
+  }
+
+  a {
+    display: inline-block;
+    max-width: 100%;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    display: block;
-  }
-
-  &.teams {
-    font-family: $ms-font-family-fallbacks;
   }
 }
 

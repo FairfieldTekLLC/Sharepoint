@@ -1,0 +1,8 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "version": "1.4.1",
+    "libraryName": "custom-nav-on-premise",
+    "libraryId": "8a3e1556-da5a-41b4-8ca3-7d1c29bfd620",
+    "environment": "onprem"
+  }
+}

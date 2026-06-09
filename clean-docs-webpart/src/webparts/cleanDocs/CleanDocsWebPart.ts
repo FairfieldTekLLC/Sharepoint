@@ -69,6 +69,10 @@ export default class YourWebPart extends BaseClientSideWebPart<IYourWebPartProps
     ReactDom.render(element, this.domElement);
   }
 
+  protected onDispose(): void {
+    ReactDom.unmountComponentAtNode(this.domElement);
+  }
+
   /**
    * getPropertyPaneConfiguration()
    *

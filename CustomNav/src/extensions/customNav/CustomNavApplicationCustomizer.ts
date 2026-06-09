@@ -305,8 +305,8 @@ export default class CustomNavApplicationCustomizer
 
     const list = document.createElement('ul');
     list.className = 'custom-nav-list custom-nav-list-root';
-    tree.forEach((node) => list.appendChild(this._renderSiteNode(node, 0)));
     externalLinks.forEach((link) => list.appendChild(this._renderExternalLinkItem(link, 0)));
+    tree.forEach((node) => list.appendChild(this._renderSiteNode(node, 0)));
 
     this._navHost.appendChild(list);
     this._bindMenuInteractions();
@@ -760,7 +760,23 @@ export default class CustomNavApplicationCustomizer
         z-index: 40;
       }
 
+      .custom-nav-list-root {
+        max-height: 54px;
+        overflow: hidden;
+        transition: max-height 0.2s ease;
+      }
+
+      .custom-nav-shell:focus-within .custom-nav-list-root {
+        max-height: 80vh;
+        overflow: visible;
+      }
+
       @media (hover: hover) and (pointer: fine) {
+        .custom-nav-shell:hover .custom-nav-list-root {
+          max-height: 80vh;
+          overflow: visible;
+        }
+
         .custom-nav-item:hover {
           z-index: 40;
         }
@@ -780,8 +796,8 @@ export default class CustomNavApplicationCustomizer
       }
 
       .custom-nav-link {
-        padding: 4px 8px;
-        font-size: 14px;
+        padding: 4px 10px;
+        font-size: 12px;
         border-radius: 2px;
       }
 
@@ -850,8 +866,8 @@ export default class CustomNavApplicationCustomizer
       }
 
       .custom-nav-dropdown-link {
-        padding: 5px 10px;
-        font-size: 13px;
+        padding: 4px 10px;
+        font-size: 11px;
       }
 
       .custom-nav-dropdown-link:hover {
@@ -868,6 +884,8 @@ export default class CustomNavApplicationCustomizer
         .custom-nav-list-root {
           display: block;
           padding: 6px 0;
+          max-height: none;
+          overflow: visible;
         }
 
         .custom-nav-item {
@@ -877,7 +895,7 @@ export default class CustomNavApplicationCustomizer
         .custom-nav-link,
         .custom-nav-dropdown-link {
           flex: 1;
-          padding: 10px 12px;
+          padding: 4px 10px;
         }
 
         .custom-nav-dropdown,
