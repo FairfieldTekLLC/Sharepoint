@@ -511,6 +511,7 @@ export default class CustomNavApplicationCustomizer
       const link = target.closest('.custom-nav-link, .custom-nav-dropdown-link') as HTMLAnchorElement | null;
       if (link) {
         this._closeAllMenus();
+        this._blurPointerFocusedElement();
         return;
       }
 
@@ -533,6 +534,11 @@ export default class CustomNavApplicationCustomizer
       if (expanded) {
         this._closeSiblingMenus(item);
       }
+    });
+
+    this._navHost.addEventListener('mouseleave', () => {
+      this._closeAllMenus();
+      this._blurPointerFocusedElement();
     });
 
     document.addEventListener('click', (event: MouseEvent) => {
@@ -585,6 +591,35 @@ export default class CustomNavApplicationCustomizer
     this._navHost.querySelectorAll('.custom-nav-toggle, .custom-nav-flyout-toggle').forEach((toggle) => {
       toggle.setAttribute('aria-expanded', 'false');
     });
+  }
+
+  /** Blurs pointer-focused nav controls so focus-within does not keep menus expanded after mouse leave. */
+  private _blurPointerFocusedElement(): void {
+    if (!this._navHost) {
+      return;
+    }
+
+    const active = document.activeElement as HTMLElement | null;
+    if (!active || !this._navHost.contains(active)) {
+      return;
+    }
+
+    const isNavControl = active.matches(
+      '.custom-nav-link, .custom-nav-dropdown-link, .custom-nav-toggle, .custom-nav-flyout-toggle'
+    );
+    if (!isNavControl) {
+      return;
+    }
+
+    try {
+      if (active.matches(':focus-visible')) {
+        return;
+      }
+    } catch {
+      // Ignore unsupported selector errors and still blur pointer-focused controls.
+    }
+
+    active.blur();
   }
 
   /** Builds the localStorage cache key, scoped by site, user, and active filters. */
