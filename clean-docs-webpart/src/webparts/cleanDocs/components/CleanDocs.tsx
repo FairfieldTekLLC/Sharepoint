@@ -176,26 +176,38 @@ export const CleanDocs: React.FC<ICleanDocsProps> = ({
 
         return React.createElement(
           "li",
-          { key: doc.FileRef },
+          { key: doc.FileRef, className: styles.docItem },
           React.createElement(
-            "a",
-            {
-              href: docUrl,
-              title: description,
-              // Always open docs in a new tab to keep the current SharePoint page intact.
-              target: "_blank",
-              rel: "noopener noreferrer",
-              // Disable SharePoint client-side link interception so the browser follows the real URL.
-              "data-interception": "off",
-              onClick: (ev: React.MouseEvent<HTMLAnchorElement>) => {
-                // Defensive: stop framework/page handlers from hijacking navigation behavior.
-                ev.preventDefault();
-                ev.stopPropagation();
-                // Explicitly open new tab/window with safe window features.
-                window.open(docUrl, "_blank", "noopener,noreferrer");
-              }
-            },
-            getDocDisplayName(doc)
+            React.Fragment,
+            null,
+            React.createElement(
+              "a",
+              {
+                className: styles.docLink,
+                href: docUrl,
+                title: description,
+                // Always open docs in a new tab to keep the current SharePoint page intact.
+                target: "_blank",
+                rel: "noopener noreferrer",
+                // Disable SharePoint client-side link interception so the browser follows the real URL.
+                "data-interception": "off",
+                onClick: (ev: React.MouseEvent<HTMLAnchorElement>) => {
+                  // Defensive: stop framework/page handlers from hijacking navigation behavior.
+                  ev.preventDefault();
+                  ev.stopPropagation();
+                  // Explicitly open new tab/window with safe window features.
+                  window.open(docUrl, "_blank", "noopener,noreferrer");
+                }
+              },
+              getDocDisplayName(doc)
+            ),
+            description
+              ? React.createElement(
+                "div",
+                { className: styles.docDescription },
+                description
+              )
+              : null
           )
         );
       })

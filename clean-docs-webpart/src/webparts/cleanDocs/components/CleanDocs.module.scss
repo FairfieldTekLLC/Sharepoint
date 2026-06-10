@@ -14,9 +14,10 @@
   list-style: none;
   margin: 0;
   padding: 0;
+  font-size: 0.84rem;
 
   li {
-    margin: 0 0 0.6em;
+    margin: 0 0 0.85em;
     padding: 0;
   }
 
@@ -31,6 +32,26 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+}
+
+.docItem {
+  display: block;
+}
+
+.docLink {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.15;
+}
+
+.docDescription {
+  margin-top: 0.05em;
+  color: "[theme:bodyText, default: #323130]";
+  font-size: 0.95em;
+  line-height: 1.2;
 }
 
 .titleBar {
