@@ -102,6 +102,8 @@ export default class CustomNavApplicationCustomizer
   private _styleTag: HTMLStyleElement | undefined;
   /** Prevents binding the same click/keyboard handlers more than once. */
   private _menuInteractionsBound = false;
+  /** Monotonic token used to ignore stale async site-load results. */
+  private _siteLoadToken = 0;
 
   /**
    * Placeholder change callback.
@@ -221,20 +223,21 @@ export default class CustomNavApplicationCustomizer
     if (this._shouldShowOnlyCustomNavMenuItems()) {
       const externalLinks = this._getExternalLinks();
 
-      this._navHost.innerHTML = '';
+      const panelContent = document.createElement('div');
       if (!externalLinks.length) {
         const empty = document.createElement('div');
         empty.className = 'custom-nav-message';
         empty.textContent = 'No custom navigation items are configured.';
-        this._navHost.appendChild(empty);
+        panelContent.appendChild(empty);
       } else {
         const list = document.createElement('ul');
         list.className = 'custom-nav-list custom-nav-list-root';
         externalLinks.forEach((link) => list.appendChild(this._renderExternalLinkItem(link, 0)));
-        this._navHost.appendChild(list);
+        panelContent.appendChild(list);
         this._bindMenuInteractions();
       }
 
+      this._renderShellFrame(panelContent);
       container.replaceChildren(this._navHost);
       return;
     }
@@ -246,7 +249,7 @@ export default class CustomNavApplicationCustomizer
       const unavailable = document.createElement('div');
       unavailable.className = 'custom-nav-message';
       unavailable.textContent = 'Navigation data is temporarily unavailable.';
-      this._navHost.appendChild(unavailable);
+      this._renderShellFrame(unavailable);
       container.replaceChildren(this._navHost);
       return;
     }
@@ -264,22 +267,81 @@ export default class CustomNavApplicationCustomizer
     const loading = document.createElement('div');
     loading.className = 'custom-nav-message';
     loading.textContent = 'Loading sites...';
-    this._navHost.appendChild(loading);
+    this._renderShellFrame(loading);
     container.replaceChildren(this._navHost);
 
-    service.listAccessibleSites()
+    const loadToken = ++this._siteLoadToken;
+
+    this._listAccessibleSitesWithTimeout(service)
       .then((sites) => {
+        if (loadToken !== this._siteLoadToken) {
+          return;
+        }
+
         this._setCachedSites(sites);
         this._renderSiteMenu(sites);
       })
       .catch((error) => {
+        if (loadToken !== this._siteLoadToken) {
+          return;
+        }
+
         console.warn('CustomNav: failed to load sites for menu.', error);
-        this._navHost!.innerHTML = '';
         const failed = document.createElement('div');
         failed.className = 'custom-nav-message';
-        failed.textContent = 'Unable to load site navigation.';
-        this._navHost!.appendChild(failed);
+        failed.textContent = 'Unable to load site navigation. Please refresh or check Graph access.';
+        this._renderShellFrame(failed);
       });
+  }
+
+  /** Wraps site loading with a timeout so the UI never remains in a permanent loading state. */
+  private async _listAccessibleSitesWithTimeout(service: SiteSearchService, timeoutMs = 20000): Promise<ISiteHit[]> {
+    const loadPromise = service.listAccessibleSites();
+    const timeoutPromise = new Promise<ISiteHit[]>((_resolve, reject) => {
+      window.setTimeout(() => reject(new Error('Timed out loading accessible sites.')), timeoutMs);
+    });
+
+    return Promise.race([loadPromise, timeoutPromise]);
+  }
+
+  /** Renders a consistent shell: title row + hamburger + collapsible menu panel. */
+  private _renderShellFrame(panelContent: HTMLElement): void {
+    if (!this._navHost) {
+      return;
+    }
+
+    this._navHost.innerHTML = '';
+    this._navHost.className = 'custom-nav-shell';
+
+    const header = document.createElement('div');
+    header.className = 'custom-nav-header';
+
+    const title = document.createElement('span');
+    title.className = 'custom-nav-title';
+    title.textContent = 'Select Site:';
+    header.appendChild(title);
+
+    const hamburger = document.createElement('button');
+    hamburger.type = 'button';
+    hamburger.className = 'custom-nav-hamburger';
+    hamburger.setAttribute('aria-label', 'Toggle site menu');
+    hamburger.setAttribute('aria-expanded', 'false');
+
+    for (let i = 0; i < 3; i++) {
+      const line = document.createElement('span');
+      line.className = 'custom-nav-hamburger-line';
+      hamburger.appendChild(line);
+    }
+
+    header.appendChild(hamburger);
+    this._navHost.appendChild(header);
+
+    const panel = document.createElement('div');
+    panel.className = 'custom-nav-panel';
+    panel.appendChild(panelContent);
+    this._navHost.appendChild(panel);
+
+    this._bindMenuInteractions();
   }
 
   /**
@@ -301,15 +363,12 @@ export default class CustomNavApplicationCustomizer
     const tree = this._buildSiteTree(validSites);
     const externalLinks = this._getExternalLinks();
 
-    this._navHost.innerHTML = '';
-
     const list = document.createElement('ul');
     list.className = 'custom-nav-list custom-nav-list-root';
     externalLinks.forEach((link) => list.appendChild(this._renderExternalLinkItem(link, 0)));
     tree.forEach((node) => list.appendChild(this._renderSiteNode(node, 0)));
 
-    this._navHost.appendChild(list);
-    this._bindMenuInteractions();
+    this._renderShellFrame(list);
   }
 
   /**
@@ -508,9 +567,21 @@ export default class CustomNavApplicationCustomizer
     this._navHost.addEventListener('click', (event: MouseEvent) => {
       const target = event.target as HTMLElement;
 
+      const hamburger = target.closest('.custom-nav-hamburger') as HTMLButtonElement | null;
+      if (hamburger) {
+        event.preventDefault();
+        const shouldOpen = !this._navHost!.classList.contains('is-menu-open');
+        this._setMainMenuOpen(shouldOpen);
+        if (!shouldOpen) {
+          this._closeAllMenus();
+        }
+        return;
+      }
+
       const link = target.closest('.custom-nav-link, .custom-nav-dropdown-link') as HTMLAnchorElement | null;
       if (link) {
         this._closeAllMenus();
+        this._setMainMenuOpen(false);
         this._blurPointerFocusedElement();
         return;
       }
@@ -549,14 +620,29 @@ export default class CustomNavApplicationCustomizer
       const target = event.target as Node;
       if (!this._navHost.contains(target)) {
         this._closeAllMenus();
+        this._setMainMenuOpen(false);
       }
     });
 
     document.addEventListener('keydown', (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         this._closeAllMenus();
+        this._setMainMenuOpen(false);
       }
     });
+  }
+
+  /** Opens/closes the main hamburger menu and keeps aria-expanded in sync. */
+  private _setMainMenuOpen(isOpen: boolean): void {
+    if (!this._navHost) {
+      return;
+    }
+
+    this._navHost.classList.toggle('is-menu-open', isOpen);
+    const hamburger = this._navHost.querySelector('.custom-nav-hamburger') as HTMLButtonElement | null;
+    if (hamburger) {
+      hamburger.setAttribute('aria-expanded', String(isOpen));
+    }
   }
 
   /** Closes sibling menus when one menu item is opened. */
@@ -772,17 +858,73 @@ export default class CustomNavApplicationCustomizer
         font-family: Segoe UI, Arial, sans-serif;
         border-bottom: 1px solid #0b1230;
         position: relative;
+        overflow: visible;
         z-index: 100001;
+      }
+
+      .custom-nav-header {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 12px;
+        padding: 10px 12px;
+      }
+
+      .custom-nav-title {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+      }
+
+      .custom-nav-hamburger {
+        width: 38px;
+        height: 32px;
+        display: inline-flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 4px;
+        border: 1px solid #2b3a7f;
+        background: #1a2558;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      .custom-nav-hamburger-line {
+        width: 18px;
+        height: 2px;
+        background: #ffffff;
+        border-radius: 2px;
+      }
+
+      .custom-nav-panel {
+        display: none;
+        position: absolute;
+        top: calc(100% - 1px);
+        left: 0;
+        width: min(460px, calc(100vw - 16px));
+        max-height: min(72vh, 620px);
+        padding: 8px;
+        background: #101a48;
+        border: 1px solid #0b1230;
+        border-radius: 0;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+        overflow: hidden;
+        z-index: 100010;
+      }
+
+      .custom-nav-shell.is-menu-open .custom-nav-panel {
+        display: block;
       }
 
       .custom-nav-list {
         list-style: none;
         margin: 0;
-        padding: 8px 12px;
-        display: flex;
-        gap: 2px;
-        flex-wrap: wrap;
-        align-items: center;
+        padding: 0;
+        display: block;
+        gap: 0;
+        flex-wrap: nowrap;
+        align-items: stretch;
         overflow: visible;
       }
 
@@ -795,31 +937,21 @@ export default class CustomNavApplicationCustomizer
         z-index: 40;
       }
 
+      .custom-nav-list-root > .custom-nav-item:first-child:not(:last-child) {
+        margin-bottom: 8px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #2b3a7f;
+      }
+
       .custom-nav-list-root {
-        max-height: 54px;
-        overflow: hidden;
-        transition: max-height 0.2s ease;
-      }
-
-      .custom-nav-shell:focus-within .custom-nav-list-root {
-        max-height: 80vh;
-        overflow: visible;
-      }
-
-      @media (hover: hover) and (pointer: fine) {
-        .custom-nav-shell:hover .custom-nav-list-root {
-          max-height: 80vh;
-          overflow: visible;
-        }
-
-        .custom-nav-item:hover {
-          z-index: 40;
-        }
+        max-height: calc(min(72vh, 620px) - 16px);
+        overflow: auto;
       }
 
       .custom-nav-row {
         display: flex;
         align-items: center;
+        justify-content: space-between;
       }
 
       .custom-nav-link,
@@ -831,9 +963,9 @@ export default class CustomNavApplicationCustomizer
       }
 
       .custom-nav-link {
-        padding: 4px 10px;
-        font-size: 12px;
-        border-radius: 2px;
+        padding: 8px 10px;
+        font-size: 13px;
+        border-radius: 0;
       }
 
       .custom-nav-link:hover {
@@ -852,7 +984,7 @@ export default class CustomNavApplicationCustomizer
         background: transparent;
         color: #ffffff;
         cursor: pointer;
-        padding: 4px 4px;
+        padding: 8px 8px;
         line-height: 1;
         transition: transform 0.18s ease;
       }
@@ -872,37 +1004,32 @@ export default class CustomNavApplicationCustomizer
 
       .custom-nav-dropdown {
         display: none;
-        position: absolute;
-        top: 100%;
-        left: 0;
-        min-width: 240px;
+        position: static;
+        top: auto;
+        left: auto;
+        min-width: 0;
         margin: 0;
-        padding: 6px 0;
+        padding: 0;
         list-style: none;
-        background: #1a2558;
-        border: 1px solid #0b1230;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
-        z-index: 50;
+        background: transparent;
+        border-left: 2px solid #2b3a7f;
+        box-shadow: none;
+        z-index: 1;
+        margin-left: 12px;
       }
 
       .custom-nav-dropdown .custom-nav-dropdown {
-        top: -7px;
-        left: 100%;
+        top: auto;
+        left: auto;
       }
 
       .custom-nav-item.is-open > .custom-nav-dropdown {
         display: block;
       }
 
-      @media (hover: hover) and (pointer: fine) {
-        .custom-nav-item:hover > .custom-nav-dropdown {
-          display: block;
-        }
-      }
-
       .custom-nav-dropdown-link {
-        padding: 4px 10px;
-        font-size: 11px;
+        padding: 7px 10px;
+        font-size: 12px;
       }
 
       .custom-nav-dropdown-link:hover {
@@ -910,44 +1037,20 @@ export default class CustomNavApplicationCustomizer
       }
 
       .custom-nav-message {
-        padding: 10px 12px;
+        padding: 10px 8px;
         font-size: 13px;
         opacity: 0.95;
       }
 
       @media (max-width: 900px) {
+        .custom-nav-panel {
+          left: 0;
+          width: calc(100vw - 8px);
+          max-height: 70vh;
+        }
+
         .custom-nav-list-root {
-          display: block;
-          padding: 6px 0;
-          max-height: none;
-          overflow: visible;
-        }
-
-        .custom-nav-item {
-          width: 100%;
-        }
-
-        .custom-nav-link,
-        .custom-nav-dropdown-link {
-          flex: 1;
-          padding: 4px 10px;
-        }
-
-        .custom-nav-dropdown,
-        .custom-nav-dropdown .custom-nav-dropdown {
-          position: static;
-          min-width: 0;
-          box-shadow: none;
-          border-left: 2px solid #2b3a7f;
-          margin-left: 10px;
-        }
-
-        .custom-nav-flyout-toggle {
-          transform: rotate(90deg);
-        }
-
-        .custom-nav-item.is-open > .custom-nav-row > .custom-nav-flyout-toggle {
-          transform: rotate(180deg);
+          max-height: 60vh;
         }
       }
     `;
