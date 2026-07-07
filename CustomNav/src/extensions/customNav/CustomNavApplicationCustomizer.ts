@@ -708,12 +708,11 @@ export default class CustomNavApplicationCustomizer
     active.blur();
   }
 
-  /** Builds the localStorage cache key, scoped by site, user, and active filters. */
+  /** Builds the localStorage cache key, scoped by user and active filters. */
   private _getCacheKey(): string {
     const userKey = (this.context.pageContext.user.loginName || 'anonymous').toLowerCase();
-    const siteKey = this.context.pageContext.site.absoluteUrl.toLowerCase();
     const filterKey = this._getFilterCacheKey();
-    return `custom-nav-menu-cache::${siteKey}::${userKey}::${filterKey}`;
+    return `custom-nav-menu-cache::${userKey}::${filterKey}`;
   }
 
   /** Encodes filter settings into the cache key so different filter combinations do not share stale data. */
